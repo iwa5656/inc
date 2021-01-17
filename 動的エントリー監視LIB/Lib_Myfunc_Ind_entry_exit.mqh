@@ -123,7 +123,7 @@ struct struct_entry_exit_ctr{
 	
 	int testflag;
 };
-#define ENTRY_EXIT_CTR_OF_NUM 10000
+#define ENTRY_EXIT_CTR_OF_NUM 20000
 struct_entry_exit_ctr	entry_exit_ctr[ENTRY_EXIT_CTR_OF_NUM];
 void add_entry_exit_ctr(void){
 	int i=entry_exit_ctr_count;
