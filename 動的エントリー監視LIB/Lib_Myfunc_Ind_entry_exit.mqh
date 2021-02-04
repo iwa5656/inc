@@ -189,7 +189,7 @@ void entry_exit_ctr_tick_exe(double now_price_ask,double now_price_bid){
 
 			}else if(entry_exit_ctr[i].command == 99){//全Exit
 				exit_all();
-				for(int i=entry_exit_ctr_start_idx;i<entry_exit_ctr_count;i++){
+				for(i=entry_exit_ctr_start_idx;i<entry_exit_ctr_count;i++){
 					if(entry_exit_ctr[i].status >= 1){//監視対象あり　　エントリー処理・監視
 						entry_exit_ctr[i].status = 0;//無効へ
 					}
@@ -804,7 +804,7 @@ void set_Ind_to_EA_para(double &p[]){
 	p[i++]=Ind_Tp_Price;
 	p[i++]=Ind_Sl_Price;
 	p[i++]=Ind_command;
-	p[i++]=Ind_EntryTime;
+	p[i++]=(double)Ind_EntryTime;
 	p[i++]=Ind_EntryDirect;
 	p[i++]=Ind_trailing_step_pips;
 	p[i++]=Ind_trailing_start_pips;
