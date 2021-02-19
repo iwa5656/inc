@@ -91,6 +91,39 @@ string PeriodToString(ENUM_TIMEFRAMES l_period)
      }
    return(NULL);
   };
+  double PeriodToIndex(ENUM_TIMEFRAMES l_period)
+  {
+   switch(l_period)
+     {
+      case PERIOD_M1: return(1);
+      case PERIOD_M2: return(2);
+      case PERIOD_M3: return(3);
+      case PERIOD_M4: return(4);
+      case PERIOD_M5: return(5);
+      case PERIOD_M6: return(6);
+      case PERIOD_M10: return(7);
+      case PERIOD_M12: return(8);
+      case PERIOD_M15: return(9);
+      case PERIOD_M20: return(10);
+      case PERIOD_M30: return(11);
+      case PERIOD_H1: return(12);
+      case PERIOD_H2: return(13);
+      case PERIOD_H3: return(14);
+      case PERIOD_H4: return(15);
+      case PERIOD_H6: return(16);
+      case PERIOD_H8: return(17);
+      case PERIOD_H12: return(18);
+      case PERIOD_D1: return(19);
+      case PERIOD_W1: return(20);
+      case PERIOD_MN1: return(21);
+     }
+   return(NULL);
+  };
+  double get_peri_direct_pos_offset(double pips,ENUM_TIMEFRAMES l_period,int dir){
+	  double sub_v=chgPips2price(pips);
+	  sub_v=sub_v*PeriodToIndex(l_period)*((double)dir);
+	  return sub_v;
+  }
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 //|                                                                  |
