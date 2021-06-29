@@ -202,7 +202,9 @@ uint MYbuyOrder(
 )
  { 
                //--- リクエストと結果の宣言と初期化
-                 MqlTradeRequest request={0};
+                 //MqlTradeRequest request={0};//chg 20210624 start
+                 MqlTradeRequest request;
+                 //chg 20210624 end
                  MqlTradeResult  result={0};
                //--- リクエストのパラメータ
                //  request.action   =cmd;                     //　取引操作タイプ
@@ -250,7 +252,10 @@ uint MYsellOrder(
 ) 
  { 
                //--- リクエストと結果の宣言と初期化
-                 MqlTradeRequest request={0};
+                 //MqlTradeRequest request={0};//chg 20210624 start
+                 MqlTradeRequest request;
+                 //chg 20210624 end
+                 
                  MqlTradeResult  result={0};
                //--- リクエストのパラメータ
                  request.action   =TRADE_ACTION_DEAL;                     // 取引操作タイプ
