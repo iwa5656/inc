@@ -204,6 +204,7 @@ uint MYbuyOrder(
                //--- リクエストと結果の宣言と初期化
                  //MqlTradeRequest request={0};//chg 20210624 start
                  MqlTradeRequest request;
+                 ZeroMemory(request);// add 20210820
                  //chg 20210624 end
                  MqlTradeResult  result={0};
                //--- リクエストのパラメータ
@@ -254,6 +255,8 @@ uint MYsellOrder(
                //--- リクエストと結果の宣言と初期化
                  //MqlTradeRequest request={0};//chg 20210624 start
                  MqlTradeRequest request;
+                 ZeroMemory(request);// add 20210820
+                 
                  //chg 20210624 end
                  
                  MqlTradeResult  result={0};

@@ -572,7 +572,8 @@ void OrderExecute_EntryNo(int i){
         sl = NormalizeDouble(ask+sl,Digits());
         tp = NormalizeDouble(bid-tp,Digits());
         ret=OrderSend(Symbol(),  OP_SELL,lots,bid,3,sl,tp,str_comment,16384,0,Red); 
-    }else if(Ind_EntryDirect==1){
+//    }else if(Ind_EntryDirect==1){	// chg 20210820 参照不具合　正しい変数を参照する
+    }else if(entry_exit_ctr[i].EntryDirect==1){	//　chg 20210820 参照不具合　正しい変数を参照する
         sl = NormalizeDouble(bid-sl,Digits());
         tp = NormalizeDouble(ask+tp,Digits());
         ret = OrderSend(Symbol(),  OP_BUY,lots,ask,3,sl,tp,str_comment,16384,0,Green); 
