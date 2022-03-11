@@ -105,6 +105,7 @@ struct struct_entry_exit_ctr{
 	int	hyoukaSyuhouNo;//hyoukaSyuhouNo
 	int	command;// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
 				//  10  即時売り買い（TPSL指定なし）
+				//  20  指定決済	（指定：Ind_EntryNo,Ind_hyoukaNo,Ind_hyoukaSyuhouNo）
 				//　99　全Exit　
 	int EntryDirect;//-1:sell, 1:buy
 	string key;
@@ -788,6 +789,17 @@ void SetSendData_forExitAll(void){
 
 	
 	printf("★★★★SetSendData_forExitAll"
+	    +"entryNo:"+IntegerToString(a)
+	    
+	    );
+}
+//Exit
+void SetSendData_forExit(int entry_no){// 指定のentry_noをExitさせる
+	int command = 22;
+	int a=entry_no;
+	GlobalVariableSet("Ind_command",command);// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
+	GlobalVariableSet("Ind_EntryNo",a);
+	printf("★★★★SetSendData_forExit"
 	    +"entryNo:"+IntegerToString(a)
 	    
 	    );
