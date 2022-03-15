@@ -69,6 +69,7 @@ Tick動作部分
 #endif //commenttt
 //初期化
 void init_entry_exit_ctr_forEA(void){// (★EA)
+   ctrade.SetExpertMagicNumber(EXPERT_MAGIC);
 	entry_exit_ctr_count = 0;
 	entry_exit_ctr_start_idx=0;
 
@@ -86,13 +87,17 @@ void init_entry_exit_ctr_forEA(void){// (★EA)
 	Ind_trailing_step_pips=-1;
 	Ind_trailing_start_pips=-1;
 	Ind_trailing_stop_pips=-1;
+	Ind_send_count=-1;
+	
     
     
     Ind_EntryTime = 0;
     Ind_command = -1;
     
     IndReciveData();
-    pre_Ind_EntryNo=Ind_EntryNo;	
+    pre_Ind_EntryNo=Ind_EntryNo;
+	pre_Ind_send_count=Ind_send_count;
+		
 }
 //データ定義
 int entry_exit_ctr_start_idx;
@@ -163,11 +168,13 @@ void entry_exit_ctr_tick_exe(double now_price_ask,double now_price_bid){
 	//受信処理
     IndReciveData();
 	if(IndChkChgData()==true){
+		if(Ind_EntryNo>130){ printf("★★★★chgRecive");}//debug ★★★
         //登録処理
         add_entry_exit_ctr();
 	   
 	}
-	
+	//データ受信完了フラグ送信
+	reciveed_senddata();
 	//監視処理
 	int first_find_idx=0;
 	for(int i=entry_exit_ctr_start_idx;i<entry_exit_ctr_count;i++){
@@ -187,6 +194,12 @@ void entry_exit_ctr_tick_exe(double now_price_ask,double now_price_bid){
 					OrderExecute_EntryNo_for_sokuji(i);
 					entry_exit_ctr[i].status = 2;
 				}
+			}else if(entry_exit_ctr[i].command == 20){//特定Exit
+			    if(entry_exit_ctr[i].status != 0){
+					exit_idx(i);
+					entry_exit_ctr[i].status = 0;
+				}
+
 
 			}else if(entry_exit_ctr[i].command == 99){//全Exit
 				exit_all();
@@ -250,6 +263,10 @@ void entry_exit_ctr_tick_exe(double now_price_ask,double now_price_bid){
 }
 void exit_all(void){
 	ctrade.PositionClose(_Symbol);
+}
+void exit_idx(int i){
+	string key = MakeKeyName_Comment(entry_exit_ctr[i].EntryNo,entry_exit_ctr[i].hyoukaNo,entry_exit_ctr[i].hyoukaSyuhouNo);
+	exit_entry_exit_ctr(key);
 }
 void exit_entry_exit_ctr(string &key){// key  売り買い情報
 	PositionSelect(Symbol());
@@ -392,7 +409,8 @@ double Ind_trailing_step_pips;
 double Ind_trailing_start_pips;
 double Ind_trailing_stop_pips;
 double Ind_lots;
-
+int Ind_send_count,pre_Ind_send_count;//送信データをセット後、前回値より１あげることで、データを変化したと通知する。
+int Ind_send_flag;// 0の時に送信可能。送信データ設定後、フラグを１にする。
 //void IndOninit(void){
 //    Ind_EntryNo=-1;
 //    Ind_hyoukaNo=-1;
@@ -432,11 +450,15 @@ bool IndChkChgData(void){
 
 
 
-    return ( Ind_EntryNo!=-1 && Ind_EntryNo != pre_Ind_EntryNo);
+    return ( Ind_EntryNo!=-1 && (
+         //Ind_EntryNo != pre_Ind_EntryNo || 
+	      Ind_send_count != pre_Ind_send_count
+	  ));
 }
 extern double para[];
 void IndReciveData(void){
     pre_Ind_EntryNo=Ind_EntryNo;
+	pre_Ind_send_count = Ind_send_count;
     
     double re;
     bool ret;
@@ -501,6 +523,23 @@ void IndReciveData(void){
 	if(ret==true){
 		Ind_lots =re;
 	}
+	ret = GlobalVariableGet("Ind_send_count",re);
+	if(ret==true){
+		Ind_send_count =re;
+	}
+#define debug_recive	
+#ifdef debug_recive
+	if(Ind_EntryNo>130){
+		printf("★★★Recive data"
+			+"entryNo:"+IntegerToString(Ind_EntryNo)
+			+"EntryPrice:"+DoubleToString(Ind_EntryPrice,5)
+			+"Tp_Price:"+IntegerToString(Ind_command)
+			+"Sl_Price:"+IntegerToString((int)Ind_send_count)
+			
+			);
+	}
+#endif
+
 
 
 #ifdef USE_IND_TO_EA_FOR_OPTIMUM_TESTER
@@ -520,6 +559,7 @@ void IndReciveData(void){
 		Ind_trailing_start_pips = para[i++];
 		Ind_trailing_stop_pips = para[i++];
 		Ind_lots = para[i++];
+		Ind_send_count = para[i++];
 #endif//USE_IND_TO_EA_FOR_OPTIMUM_TESTER
 
 
@@ -708,6 +748,11 @@ string MakeKeyName_Comment(int no,int hyoukaSyuhouNo,int EntryDirect){
 
 void init_entry_exit_ctr_forInd(void){//　for　Ind使用★　Initへ追加
 	Ind_EntryNo = 0;
+	Ind_send_count = 0;
+	Ind_send_flag=0;
+	// queue
+   entry_exit_send_queue_num=0;
+   queue_head =0; queue_num = 0;
 }
 
 //各処理　　//　for　Ind使用★　Entry時に追加
@@ -717,6 +762,7 @@ void SetSendData_forEntry_tpsl(int EntryDirect,int hyoukaNo,int hyoukaSyuhouNo,d
 	int command = 0;
 	Ind_EntryNo = Ind_EntryNo+1;
 	int a = Ind_EntryNo;
+	#ifdef dellll
 	GlobalVariableSet("Ind_command",command);// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
 	GlobalVariableSet("Ind_EntryNo",a);
 	GlobalVariableSet("Ind_EntryDirect",EntryDirect);
@@ -726,6 +772,21 @@ void SetSendData_forEntry_tpsl(int EntryDirect,int hyoukaNo,int hyoukaSyuhouNo,d
 	GlobalVariableSet("Ind_Tp_Price",Tp_Price);
 	GlobalVariableSet("Ind_Sl_Price",Sl_Price);
 	GlobalVariableSet("Ind_lots",lots);
+	GlobalVariableSet("Ind_send_count",++Ind_send_count);
+	#endif //dellll
+	struct_entry_exit_send_queue ss;
+	ss.Ind_command=command;
+	ss.Ind_EntryNo=a;
+	ss.Ind_EntryDirect=EntryDirect;
+	ss.Ind_hyoukaNo=hyoukaNo;
+	ss.Ind_hyoukaSyuhouNo=hyoukaSyuhouNo;
+	ss.Ind_EntryPrice=EntryPrice;
+	ss.Ind_Tp_Price=Tp_Price;
+	ss.Ind_Sl_Price=Sl_Price;
+	ss.Ind_lots=lots;
+	ss.Ind_send_count=++Ind_send_count;
+
+	send_add_queue_entry_exit_send(ss);
 	
 }
  //動的監視でTPSLを実現
@@ -733,16 +794,23 @@ void SetSendData_forEntry_tpsl_direct_ctrl(int EntryDirect,int hyoukaNo,int hyou
 	int command = 1;
 	Ind_EntryNo = Ind_EntryNo+1;
 	int a=Ind_EntryNo;
-	GlobalVariableSet("Ind_command",command);// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
-	GlobalVariableSet("Ind_EntryNo",a);
-	GlobalVariableSet("Ind_EntryDirect",EntryDirect);
-	GlobalVariableSet("Ind_hyoukaNo",hyoukaNo);
-	GlobalVariableSet("Ind_hyoukaSyuhouNo",hyoukaSyuhouNo);
-	GlobalVariableSet("Ind_EntryPrice",EntryPrice);
-	GlobalVariableSet("Ind_Tp_Price",Tp_Price);
-	GlobalVariableSet("Ind_Sl_Price",Sl_Price);
-	GlobalVariableSet("Ind_lots",lots);
-	
+	struct_entry_exit_send_queue ss;
+	ss.Ind_command=command;// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
+	ss.Ind_EntryNo=a;
+	ss.Ind_EntryDirect=EntryDirect;
+	ss.Ind_hyoukaNo=hyoukaNo;
+	ss.Ind_hyoukaSyuhouNo=hyoukaSyuhouNo;
+	ss.Ind_EntryPrice=EntryPrice;
+	ss.Ind_Tp_Price=Tp_Price;
+	ss.Ind_Sl_Price=Sl_Price;
+	ss.Ind_lots=lots;
+	ss.Ind_send_count=++Ind_send_count;
+
+
+	send_add_queue_entry_exit_send(ss);
+
+
+
 	printf("SetSendData_forEntry_tpsl_direct_ctrl"
 	    +"entryNo:"+IntegerToString(a)
 	    +"Dir:"+IntegerToString(EntryDirect)
@@ -759,15 +827,18 @@ void SetSendData_forEntry_sokuji(int EntryDirect,int hyoukaNo,int hyoukaSyuhouNo
 	int command = 10;
 	Ind_EntryNo = Ind_EntryNo+1;
 	int a=Ind_EntryNo;
-	GlobalVariableSet("Ind_command",command);// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
-	GlobalVariableSet("Ind_EntryNo",a);
-	GlobalVariableSet("Ind_EntryDirect",EntryDirect);
-	GlobalVariableSet("Ind_hyoukaNo",hyoukaNo);
-	GlobalVariableSet("Ind_hyoukaSyuhouNo",hyoukaSyuhouNo);
-	GlobalVariableSet("Ind_EntryPrice",EntryPrice);
-	GlobalVariableSet("Ind_Tp_Price",Tp_Price);
-	GlobalVariableSet("Ind_Sl_Price",Sl_Price);
-	GlobalVariableSet("Ind_lots",lots);
+	struct_entry_exit_send_queue ss;
+	ss.Ind_command=command;// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
+	ss.Ind_EntryNo=a;
+	ss.Ind_EntryDirect=EntryDirect;
+	ss.Ind_hyoukaNo=hyoukaNo;
+	ss.Ind_hyoukaSyuhouNo=hyoukaSyuhouNo;
+	ss.Ind_EntryPrice=EntryPrice;
+	ss.Ind_Tp_Price=Tp_Price;
+	ss.Ind_Sl_Price=Sl_Price;
+	ss.Ind_lots=lots;
+	ss.Ind_send_count=++Ind_send_count;
+	send_add_queue_entry_exit_send(ss);
 	
 	printf("★★★SetSendData_forEntry_sokuji"
 	    +"entryNo:"+IntegerToString(a)
@@ -784,8 +855,11 @@ void SetSendData_forExitAll(void){
 	int command = 99;
 	Ind_EntryNo = Ind_EntryNo+1;
 	int a=Ind_EntryNo;
-	GlobalVariableSet("Ind_command",command);// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
-	GlobalVariableSet("Ind_EntryNo",a);
+	struct_entry_exit_send_queue ss;
+	ss.Ind_command=command;// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
+	ss.Ind_EntryNo=a;
+	ss.Ind_send_count=++Ind_send_count;
+	send_add_queue_entry_exit_send(ss);
 
 	
 	printf("★★★★SetSendData_forExitAll"
@@ -795,10 +869,14 @@ void SetSendData_forExitAll(void){
 }
 //Exit
 void SetSendData_forExit(int entry_no){// 指定のentry_noをExitさせる
-	int command = 22;
+	int command = 20;
 	int a=entry_no;
-	GlobalVariableSet("Ind_command",command);// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
-	GlobalVariableSet("Ind_EntryNo",a);
+	struct_entry_exit_send_queue ss;
+	ss.Ind_command=command;// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
+	ss.Ind_EntryNo=a;
+	ss.Ind_send_count=++Ind_send_count;
+	send_add_queue_entry_exit_send(ss);
+
 	printf("★★★★SetSendData_forExit"
 	    +"entryNo:"+IntegerToString(a)
 	    
@@ -823,6 +901,111 @@ void set_Ind_to_EA_para(double &p[]){
 	p[i++]=Ind_trailing_start_pips;
 	p[i++]=Ind_trailing_stop_pips;
 	p[i++]=Ind_lots;
+	p[i++]=Ind_send_count;
+	
 #endif//USE_IND_TO_EA_FOR_OPTIMUM_TESTER
     
 } 
+
+//int enqueue(data_t enq_data) の仕様
+//enq_data を待ち行列 queue_data に追加し（entry_exit_send_queue_num を１つ増やし），
+//戻り値 SUCCESS を返す。ただし，待ち行列が満杯であるときには，追加せず FAILURE を返す。
+struct struct_entry_exit_send_queue{
+   int Ind_EntryNo,pre_Ind_EntryNo;
+   int Ind_EntryDirect;
+   int Ind_hyoukaNo,pre_Ind_hyoukaNo;
+   int Ind_hyoukaSyuhouNo,pre_Ind_hyoukaSyuhouNo;
+   double Ind_EntryPrice,pre_Ind_EntryPrice;
+   double Ind_Tp_Price,pre_Ind_Tp_Price;
+   double Ind_Sl_Price,pre_Ind_Sl_Price;
+   int Ind_command;
+   datetime Ind_EntryTime;
+   double Ind_trailing_step_pips;
+   double Ind_trailing_start_pips;
+   double Ind_trailing_stop_pips;
+   double Ind_lots;
+   int Ind_send_flag;
+   int Ind_send_count;
+
+	
+};
+int entry_exit_send_queue_num;
+int queue_head ,queue_num;
+#define QUEUE_SIZE 12
+#define SUCCESS 1
+#define FAILURE 2
+struct_entry_exit_send_queue entry_exit_send_queue[QUEUE_SIZE];
+
+int enqueue(struct_entry_exit_send_queue &enq_data)
+{
+    if (entry_exit_send_queue_num < QUEUE_SIZE) {
+        entry_exit_send_queue[(queue_head + entry_exit_send_queue_num) % QUEUE_SIZE] = enq_data;
+        entry_exit_send_queue_num ++;
+        return SUCCESS;
+    } else {
+        return FAILURE;
+    }
+}
+//int dequeue(data_t *deq_data) の仕様
+//待ち行列が空でなければ、それからデータを一つ取り出し，その値を *deq_data に代入し、entry_exit_send_queue_num は１減じ， 
+//queue_head は１つ進めて、SUCCESS を戻り値として返す。ただし，待ち行列が空のときは，戻り値として FAILURE を返す他は、何もしない。
+
+int dequeue(struct_entry_exit_send_queue &deq_data)
+{
+    if (entry_exit_send_queue_num > 0) {
+        deq_data = entry_exit_send_queue[queue_head];
+        queue_head = (queue_head + 1) % QUEUE_SIZE;
+        entry_exit_send_queue_num --;
+        return SUCCESS;
+    } else {
+        return FAILURE;
+    }
+}
+void send_add_queue_entry_exit_send(struct_entry_exit_send_queue &enq_data){
+	enqueue(enq_data);
+	send_syori_entry_exit_send();
+}
+
+void send_syori_entry_exit_send(void){//送信可能（受信側が受けっとったあとなら、送信する）
+   int ret=FAILURE;
+	if(entry_exit_send_queue_num>0){
+		recive_data_for_Ind();
+		if(Ind_send_flag==0){
+			//送信処理
+			struct_entry_exit_send_queue ss;
+			ret = dequeue(ss);
+			if(ret == SUCCESS){
+				GlobalVariableSet("Ind_command",ss.Ind_command);
+				GlobalVariableSet("Ind_EntryNo",ss.Ind_EntryNo);
+				GlobalVariableSet("Ind_EntryDirect",ss.Ind_EntryDirect);
+				GlobalVariableSet("Ind_hyoukaNo",ss.Ind_hyoukaNo);
+				GlobalVariableSet("Ind_hyoukaSyuhouNo",ss.Ind_hyoukaSyuhouNo);
+				GlobalVariableSet("Ind_EntryPrice",ss.Ind_EntryPrice);
+				GlobalVariableSet("Ind_Tp_Price",ss.Ind_Tp_Price);
+				GlobalVariableSet("Ind_Sl_Price",ss.Ind_Sl_Price);
+				GlobalVariableSet("Ind_lots",ss.Ind_lots);				
+				
+				Ind_send_flag=1;
+				GlobalVariableSet("Ind_send_flag",Ind_send_flag);
+				GlobalVariableSet("Ind_send_count",++Ind_send_count);
+			}
+		}
+	}
+}
+//★Ind　動的監視Tick　IndのTickに定義
+void send_ctr_tick_exe(void){
+	send_syori_entry_exit_send();
+}
+
+void reciveed_senddata(void){	//データ受信後、受信したことを送信側に通知　1→０へ
+	GlobalVariableSet("Ind_send_flag",0);
+}
+
+void recive_data_for_Ind(void){
+	double re;
+	bool ret=false;
+	ret = GlobalVariableGet("Ind_send_flag",re);
+	if(ret==true){
+		Ind_send_flag =(int)re;
+	}
+}
