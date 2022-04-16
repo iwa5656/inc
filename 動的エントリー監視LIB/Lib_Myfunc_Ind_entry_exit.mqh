@@ -527,7 +527,7 @@ void IndReciveData(void){
 	if(ret==true){
 		Ind_send_count =re;
 	}
-#define debug_recive	
+//#define debug_recive	
 #ifdef debug_recive
 	if(Ind_EntryNo>130){
 		printf("★★★Recive data"
