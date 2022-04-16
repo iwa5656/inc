@@ -874,7 +874,10 @@ void SetSendData_forExit(int entry_no){// 指定のentry_noをExitさせる
 	struct_entry_exit_send_queue ss;
 	ss.Ind_command=command;// 動的監視有無: 0:なし、１：動的TPSLあり、２：動的TPSLありかつ　Trailing_stop
 	ss.Ind_EntryNo=a;
+	ss.Ind_hyoukaNo=0;				//将来拡張用（区別したいなら、引く数に追加して使用すること）
+	ss.Ind_hyoukaSyuhouNo=0;		//将来拡張用（区別したいなら、引く数に追加して使用すること）
 	ss.Ind_send_count=++Ind_send_count;
+
 	send_add_queue_entry_exit_send(ss);
 
 	printf("★★★★SetSendData_forExit"
